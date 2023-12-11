@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+
+contract MaterialToken is ERC20, Ownable {
+    enum Object {CLOTH, WOOD, METAL, LEATHER }
+
+    event ObjectRedeemed(address indexed account, Object object, uint256 objectCost);
+
+    mapping(address => Object) public userSelectedObjects;
+
+    constructor(address initialOwner) ERC20("MaterialToken", "MTK") Ownable(initialOwner) {}
+
+    function mint(address to, uint256 numTokens) external onlyOwner {
+        _mint(to, numTokens);
+    }
+
+    function burn(uint256 numTokens) external {
+        require(numTokens > 0, "The number of tokens to destroy must be greater than zero");
+        require(balanceOf(msg.sender) >= numTokens, "Insufficient funds for object destruction");
+        _burn(msg.sender, numTokens);
+    }
+
+    function redeemObject(uint8 objectNumber) external {
+        Object object = convertObject(objectNumber);
+
+        uint256 objectCost;
+
+        if (object == Object.WOOD) {
+            objectCost = 500;
+        } else if (object == Object.METAL) {
+            objectCost = 1000;
+        } else if (object == Object.CLOTH) {
+            objectCost = 750;
+        } else {
+            objectCost = 1200;
+        }
+
+        require(balanceOf(msg.sender) >= objectCost, "Insufficient funds for object redemption");
+        _burn(msg.sender, objectCost);
+
+        userSelectedObjects[msg.sender] = object;
+        emit ObjectRedeemed(msg.sender, object, objectCost);
+    }
+
+    function transfer_(address recipient, uint256 numTokens) external {
+        require(recipient != address(0), "Invalid recipient address provided");
+        require(balanceOf(msg.sender) >= numTokens, "Insufficient funds for object transfer");
+        _transfer(msg.sender, recipient, numTokens);
+    }
+
+    function convertObject(uint8 objectNumber) internal pure returns (Object) {
+        require(objectNumber >= 1 && objectNumber <= 4, "Invalid object number");
+
+        if (objectNumber == 1) {
+            return Object.CLOTH;
+        } else if (objectNumber == 2) {
+            return Object.WOOD;
+        } else if (objectNumber == 3) {
+            return Object.METAL;
+        } else {
+            return Object.LEATHER;
+        }
+    }
+}
